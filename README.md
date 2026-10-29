@@ -26,6 +26,11 @@ The target users are e-commerce businesses, online retailers, customer experienc
 
 The first version will not include user authentication or account management, multilingual support (only Turkish reviews are analyzed), or cloud deployment. These are planned as future work.
 
+## Dataset
+
+The project uses the MüşteriYorumları dataset (103K Turkish e-commerce
+customer reviews from Hepsiburada and Trendyol, labeled 1-5 stars).
+
 ## Current Status
 
 Week 1 - Project definition and research.
