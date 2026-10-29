@@ -22,7 +22,7 @@ The initial version will focus exclusively on Turkish customer reviews and senti
 
 ## 6. Dataset
 
-The project will initially consider the MüşteriYorumları dataset, which is reported to contain Turkish e-commerce reviews with ratings from one to five stars. The dataset will be examined to assess its structure, label distribution, data quality, and suitability for sentiment classification. The final dataset may be selected or adjusted based on this initial evaluation. The mapping between star ratings and sentiment classes will be determined during preprocessing.
+The project will use the MüşteriYorumları dataset, which contains approximately 103,000 Turkish e-commerce reviews from Hepsiburada and Trendyol with ratings from one to five stars. The dataset will be examined to assess its structure, label distribution, and data quality. Star ratings will be mapped to three sentiment classes: ratings of 1-2 as Negative, 3 as Neutral, and 4-5 as Positive. This mapping will be verified during dataset inspection by examining representative reviews from each rating level.
 
 ## 7. Requirements Analysis
 

@@ -34,6 +34,8 @@ The first version will not include user authentication or account management, mu
 
 The project uses the MüşteriYorumları dataset (103K Turkish e-commerce
 customer reviews from Hepsiburada and Trendyol, labeled 1-5 stars).
+Star ratings are mapped to three sentiment classes: 1-2 as Negative,
+3 as Neutral, and 4-5 as Positive.
 
 ## Current Status
 
