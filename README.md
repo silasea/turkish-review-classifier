@@ -8,6 +8,10 @@ E-commerce platforms receive thousands of customer reviews, making it difficult 
 
 The objective of this project is to develop a functional and reproducible NLP service that classifies Turkish e-commerce customer reviews by sentiment. The system will compare a baseline machine learning model (TF-IDF with Logistic Regression) against a fine-tuned Turkish language encoder, evaluate both using standard classification metrics, and expose the selected model through a tested REST API with a simple user interface. The application will be containerized with Docker to ensure reproducibility.
 
+## Why Is This Problem Important?
+
+Customer reviews influence purchasing decisions and provide businesses with direct feedback about their products and services. When companies cannot analyze this feedback efficiently, important complaints and recurring problems may go unnoticed. This can delay improvements, reduce customer satisfaction, and lead to business decisions based on incomplete information. An automated sentiment analysis system can help businesses process customer feedback more efficiently and identify general patterns in customer opinions.
+
 ## Target Users
 
 The target users are e-commerce businesses, online retailers, customer experience teams, and product managers who need to analyze customer feedback efficiently. The service can help them identify positive and negative customer experiences, monitor customer satisfaction, and extract useful insights from large volumes of Turkish customer reviews. Developers may also use the API to integrate sentiment analysis capabilities into existing e-commerce applications.
