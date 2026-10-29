@@ -1,4 +1,4 @@
-# Türkçe Müşteri Yorumu Sınıflandırma Servisi
+# Turkish Customer Review Classification Service
 
 ## Project Description
 
