@@ -37,6 +37,14 @@ customer reviews from Hepsiburada and Trendyol, labeled 1-5 stars).
 Star ratings are mapped to three sentiment classes: 1-2 as Negative,
 3 as Neutral, and 4-5 as Positive.
 
+## Planned Features
+
+- Sentiment classification of Turkish customer reviews into Positive, Neutral, and Negative
+- REST API for submitting reviews and receiving predictions
+- Input validation for empty or invalid reviews
+- Storage of analysis results
+- Comparison of a baseline model and a fine-tuned Turkish language model
+
 ## Current Status
 
-Week 1 - Project definition and research.
+Week 2 - Requirements engineering and planning.
