@@ -380,13 +380,21 @@ The project uses a Python virtual environment (`.venv`), and all dependencies ar
 
 **Relationship to the architecture:** The implementation follows the component structure described in Section 15. The `BaselineModel` class provides the common `predict(text)` interface defined in the architecture, which allows the fine-tuned BERTurk model to replace the baseline in Week 5 without modifying the API layer. The model is loaded once at application startup rather than per request, as specified in the design response for NFR-01.
 
+![Dataset class distribution](../evidence/week-04/01-dataset-exploration.png)
+
+**Figure 4.1:** Mapping of star ratings to three sentiment classes and the resulting class distribution in the training set.
+
+![Baseline evaluation results](../evidence/week-04/02-baseline-results.png)
+
+**Figure 4.2:** Classification report of the TF-IDF + Logistic Regression baseline on the validation set, showing per-class metrics and a macro-F1 of 0.736.
+
 ![Successful prediction](../evidence/week-04/03-api-success.png)
 
-**Figure 4.1:** Successful prediction through the FastAPI interactive documentation, returning HTTP 200 with the predicted sentiment class.
+**Figure 4.3:** Successful prediction through the FastAPI interactive documentation, returning HTTP 200 with the predicted sentiment class.
 
 ![Validation error](../evidence/week-04/04-api-validation-error.png)
 
-**Figure 4.2:** Validation error for whitespace-only input, returning HTTP 422 without calling the model.
+**Figure 4.4:** Validation error for whitespace-only input, returning HTTP 422 without calling the model.
 
 ### Preliminary Verification
 
