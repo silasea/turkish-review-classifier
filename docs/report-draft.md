@@ -339,3 +339,89 @@ The prototype satisfies FR-01 (accepting review text), FR-02 (three-class classi
 | Version control         | Git and GitHub                        | Development history and technical evidence.                                                                          |
 
 The project uses a Python virtual environment (`.venv`), and all dependencies are recorded in `requirements.txt`.
+
+## 23. Technical Challenges and Solutions
+
+### 23.1 Package Installation Failure
+
+**Problem:** While installing the required packages, pip could not resolve a compatible set of versions and progressively tried older scikit-learn releases. It eventually attempted to build a version with no prebuilt Windows wheel from source, which failed with the error "Microsoft Visual C++ 14.0 or greater is required".
+
+**Diagnosis:** Reading the full error output showed that the installed pip version (23.2.1) was unable to resolve the dependency set and had fallen back to source builds.
+
+**Solution:** Instead of installing C++ build tools, I upgraded pip to version 26.2.2. The updated version located compatible prebuilt Windows wheels and completed the installation without any compilation step.
+
+### 23.2 API Startup Import Errors
+
+**Problem:** When starting the FastAPI application with uvicorn, the server first reported "Attribute app not found in module api" and then, after the file was corrected, "cannot import name BaselineModel from model".
+
+**Diagnosis:** The first error indicated that `src/api.py` did not yet contain the `app` object uvicorn expects. The second error showed that `src/model.py` did not contain the `BaselineModel` class referenced by the API module.
+
+**Solution:** I completed both module files with the required definitions. Because uvicorn was running with the `--reload` flag, the server restarted automatically after each save and finally reported "Application startup complete".
+
+### 23.3 Low F1-Score for the Neutral Class
+
+**Problem:** In the baseline evaluation, the Neutral class reached an F1-score of 0.562, considerably lower than Negative (0.781) and Positive (0.864).
+
+**Diagnosis:** Reviewing the per-class metrics showed that Neutral had the lowest precision (0.496), meaning that roughly half of the reviews predicted as Neutral belonged to another class. The Neutral class is also the smallest in the dataset (17.4% of the training data).
+
+**Solution:** This result confirmed two risks identified during Week 3: RISK-01 (difficulty distinguishing the Neutral class) and RISK-03 (class imbalance). The `class_weight="balanced"` setting was already applied to the Logistic Regression model as a mitigation. Improving Neutral-class performance is recorded as one of the objectives for the fine-tuned model in Week 5.
+
+## 24. Prototype Implementation
+
+**Feature:** Sentiment classification of a Turkish customer review through a REST API
+
+**Requirement IDs:** FR-01, FR-02, FR-03, FR-04, FR-05
+
+**Input:** A JSON object containing a single `text` field with the review to be classified.
+
+**Output:** A JSON object containing a single `sentiment` field with one of three values: Positive, Neutral, or Negative.
+
+**Processing:** The request reaches the `/predict` endpoint defined in `src/api.py`. FastAPI validates the request body against the `ReviewRequest` model. The endpoint then checks whether the text is empty or contains only whitespace; if so, it raises an HTTP 422 error and the model is not called. Valid text is passed to the `predict()` method of the `BaselineModel` class in `src/model.py`, which applies the saved TF-IDF and Logistic Regression pipeline and returns the predicted class. The result is returned to the client as a `PredictionResponse`.
+
+**Relationship to the architecture:** The implementation follows the component structure described in Section 15. The `BaselineModel` class provides the common `predict(text)` interface defined in the architecture, which allows the fine-tuned BERTurk model to replace the baseline in Week 5 without modifying the API layer. The model is loaded once at application startup rather than per request, as specified in the design response for NFR-01.
+
+![Successful prediction](../evidence/week-04/03-api-success.png)
+
+**Figure 4.1:** Successful prediction through the FastAPI interactive documentation, returning HTTP 200 with the predicted sentiment class.
+
+![Validation error](../evidence/week-04/04-api-validation-error.png)
+
+**Figure 4.2:** Validation error for whitespace-only input, returning HTTP 422 without calling the model.
+
+### Preliminary Verification
+
+| ID  | Input                                        | Expected                | Actual                                   | Status |
+| --- | -------------------------------------------- | ----------------------- | ---------------------------------------- | ------ |
+| P01 | "Ürün çok kaliteli ve hızlı teslim edildi."  | Positive                | Positive                                 | Pass   |
+| P02 | "Berbat bir ürün, kesinlikle almayın."       | Negative                | Negative                                 | Pass   |
+| P03 | "Fena değil ama beklediğim gibi de çıkmadı." | Neutral                 | Neutral                                  | Pass   |
+| P04 | " " (whitespace only)                        | HTTP 422, no prediction | HTTP 422, "Review text cannot be empty." | Pass   |
+
+These preliminary checks do not replace the full testing and validation work scheduled for Week 6.
+
+## 25. Development Process — Stage 1
+
+| Field                        | Entry                                                                                                                                                                                      |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Date                         | 02.11.2026                                                                                                                                                                                 |
+| Objective                    | Develop the first end-to-end prototype: load and preprocess the dataset, train a baseline model, and expose it through a REST API.                                                         |
+| Implemented functionality    | Dataset loading and label mapping, TF-IDF + Logistic Regression baseline, FastAPI `/predict` endpoint with input validation.                                                               |
+| Important technical decision | Kept the model layer separate from the API by using a consistent prediction interface. This will allow BERTurk to replace the baseline model in Week 5 without changing the API structure. |
+| Problem encountered          | Encountered package installation issues and import errors while setting up the development environment and integrating the baseline model with FastAPI.                                    |
+| Solution attempted           | Updated pip to resolve package compatibility issues, corrected module imports and class references, and tested the `/predict` endpoint with both valid and invalid inputs.                 |
+| Related GitHub commit        | 2f3aca6 — feat: implement TF-IDF baseline and FastAPI prediction endpoint                                                                                                                  |
+| Screenshot / evidence        | evidence/week-04/01-dataset-exploration.png, 02-baseline-results.png, 03-api-success.png, 04-api-validation-error.png                                                                      |
+| Next development step        | Fine-tune BERTurk and integrate it behind the same prediction interface (Week 5).                                                                                                          |
+
+## 26. Current Limitations and Next Steps
+
+The current prototype has the following limitations:
+
+- The fine-tuned BERTurk model has not yet been trained; only the TF-IDF and Logistic Regression baseline is available.
+- The baseline reached a macro-F1 of 0.736 on the validation set, below the 0.75 target defined in NFR-02.
+- FR-06 (storing analysis results in SQLite) is not implemented.
+- No user interface exists; the API is accessed through the interactive documentation page.
+- No automated tests have been written; verification was performed manually.
+- The model was trained on product reviews and its behaviour on out-of-domain text is not defined.
+
+**Planned work for Week 5:** Fine-tune BERTurk for three-class Turkish sentiment classification and integrate it into the existing FastAPI service by replacing the baseline model behind the same `predict(text)` interface, then verify that the API continues to work with the new model.
