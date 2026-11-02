@@ -319,3 +319,23 @@ Customer reviews may contain personal or identifying information. The prototype 
 6. scikit-learn. scikit-learn: Machine Learning in Python. https://scikit-learn.org/stable/ (Accessed: November 2026)
 
    I learned that scikit-learn provides tools for text feature extraction, machine learning model training, and model evaluation. I will use this library to build my TF-IDF and Logistic Regression baseline model and evaluate its performance using metrics such as accuracy and F1-score.
+
+## 21. Implementation Overview
+
+This chapter documents the first working prototype developed during Week 4. The prototype implements the core classification workflow described in Section 15: a Turkish customer review is submitted through the REST API, validated, classified by the baseline model, and the predicted sentiment class is returned as a JSON response.
+
+The prototype satisfies FR-01 (accepting review text), FR-02 (three-class classification), FR-03 (returning the predicted class), FR-04 (rejecting empty input), and FR-05 (exposing the functionality through a FastAPI REST API). FR-06 (storing results in SQLite) is not yet implemented and is planned for a later stage. The fine-tuned BERTurk model and the user interface are also outside the scope of this prototype and are scheduled for Week 5.
+
+## 22. Development Environment and Technologies
+
+| Component               | Technology / version                  | Role and reason for selection                                                                                        |
+| ----------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Language                | Python 3.11.7                         | Main development language; required by the selected NLP and machine learning libraries.                              |
+| Machine learning        | scikit-learn 1.9.1                    | Provides TfidfVectorizer and LogisticRegression used in the baseline model, together with evaluation metrics.        |
+| Data handling           | pandas 3.1.0, datasets 5.1.0          | Loading the MüşteriYorumları dataset from Hugging Face and converting it into DataFrames for preprocessing.          |
+| API framework           | FastAPI 0.162.0, uvicorn 0.54.0       | Implements the REST API and provides automatic interactive documentation used for manual verification.               |
+| Model persistence       | joblib 1.6.0                          | Saves and loads the trained pipeline so that the API does not retrain the model at startup.                          |
+| Development environment | Visual Studio Code, Jupyter notebooks | Notebooks are used for data exploration and model experiments; application code is kept in `src/` as Python modules. |
+| Version control         | Git and GitHub                        | Development history and technical evidence.                                                                          |
+
+The project uses a Python virtual environment (`.venv`), and all dependencies are recorded in `requirements.txt`.
