@@ -45,6 +45,46 @@ Star ratings are mapped to three sentiment classes: 1-2 as Negative,
 - Storage of analysis results
 - Comparison of a baseline model and a fine-tuned Turkish language model
 
+## Installation
+
+```bash
+git clone https://github.com/silasea/turkish-review-classifier.git
+cd turkish-review-classifier
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+## Running the Project
+
+Train the baseline model first by running all cells in `notebooks/baseline.ipynb`. This saves the trained model to `models/baseline.joblib`.
+
+Then start the API:
+
+```bash
+uvicorn api:app --reload --app-dir src
+```
+
+The interactive API documentation is available at `http://127.0.0.1:8000/docs`.
+
+## Usage
+
+Send a POST request to `/predict`:
+
+```json
+{
+  "text": "Ürün çok kaliteli ve hızlı teslim edildi."
+}
+```
+
+Response:
+
+```json
+{
+  "sentiment": "Positive"
+}
+```
+
 ## Current Status
 
-Week 2 - Requirements engineering and planning.
+Week 4 - First working prototype: baseline model and prediction API.
