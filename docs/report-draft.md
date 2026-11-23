@@ -1,17 +1,17 @@
 # Graduation Project Report
 
-**ALTINBAŞ UNIVERSITY**
-Faculty of Engineering and Architecture
+**ALTINBAŞ UNIVERSITY**  
+Faculty of Engineering and Architecture  
 Software Engineering Department
 
 ## Turkish Customer Review Classification Service
 
-**Student:** Sıla Yılan
-**Student Number:** 220513357
-**Instructor:** Dr. Öğr. Üye. Fatma Kuzey Edeş Huyal
+**Student:** Sıla Yılan  
+**Student Number:** 220513357  
+**Instructor:** Dr. Öğr. Üye. Fatma Kuzey Edeş Huyal  
 **Academic Year:** 2026–2027
 
-**GitHub Repository:** https://github.com/silasea/turkish-review-classifier
+**GitHub Repository:** [github.com/silasea/turkish-review-classifier](https://github.com/silasea/turkish-review-classifier)
 
 ---
 
