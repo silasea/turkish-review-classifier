@@ -5,12 +5,12 @@ from pydantic import BaseModel
 
 import config
 import database
-from model import BaselineModel
+from model import load_active_model
 
 app = FastAPI(title="Turkish Review Classifier")
 
 # The model is loaded once at startup, not per request (NFR-01)
-model = BaselineModel()
+model = load_active_model()
 
 
 @app.on_event("startup")
