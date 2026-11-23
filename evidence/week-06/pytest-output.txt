@@ -1,0 +1,30 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.7, pytest-9.2.0, pluggy-1.7.0 -- C:\Users\ASUS\OneDrive - ALTINBAS UNIVERSITY\github\turkish-review-classifier\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\ASUS\OneDrive - ALTINBAS UNIVERSITY\github\turkish-review-classifier
+plugins: anyio-4.16.0, platformdirs-4.14.3
+collecting ... collected 21 items
+
+tests/test_api.py::test_predict_returns_a_sentiment_class PASSED         [  4%]
+tests/test_api.py::test_predict_reports_the_model_and_the_storage_status PASSED [  9%]
+tests/test_api.py::test_predict_ignores_surrounding_whitespace PASSED    [ 14%]
+tests/test_api.py::test_predict_rejects_empty_text PASSED                [ 19%]
+tests/test_api.py::test_predict_rejects_whitespace_only_text PASSED      [ 23%]
+tests/test_api.py::test_predict_rejects_a_missing_text_field PASSED      [ 28%]
+tests/test_api.py::test_invalid_input_is_not_stored PASSED               [ 33%]
+tests/test_api.py::test_predict_accepts_text_at_the_maximum_length PASSED [ 38%]
+tests/test_api.py::test_predict_rejects_text_one_character_over_the_maximum PASSED [ 42%]
+tests/test_api.py::test_history_is_empty_before_any_prediction PASSED    [ 47%]
+tests/test_api.py::test_history_returns_a_stored_prediction PASSED       [ 52%]
+tests/test_api.py::test_history_limit_bounds_the_number_of_records PASSED [ 57%]
+tests/test_api.py::test_history_rejects_a_limit_below_the_minimum PASSED [ 61%]
+tests/test_api.py::test_history_rejects_a_limit_above_the_maximum PASSED [ 66%]
+tests/test_api.py::test_history_accepts_the_boundary_limits PASSED       [ 71%]
+tests/test_database.py::test_save_result_stores_the_review_and_its_class PASSED [ 76%]
+tests/test_database.py::test_get_recent_results_returns_the_newest_record_first PASSED [ 80%]
+tests/test_database.py::test_get_recent_results_respects_the_requested_limit PASSED [ 85%]
+tests/test_database.py::test_get_recent_results_is_empty_for_a_new_database PASSED [ 90%]
+tests/test_database.py::test_save_result_reports_failure_instead_of_raising PASSED [ 95%]
+tests/test_database.py::test_quotation_marks_in_review_text_are_stored_literally PASSED [100%]
+
+============================= 21 passed in 0.48s ==============================
