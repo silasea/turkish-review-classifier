@@ -1,21 +1,41 @@
 """FastAPI service exposing Turkish review sentiment classification."""
 
-from fastapi import FastAPI, HTTPException
+from contextlib import asynccontextmanager
+
+from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel
 
 import config
 import database
 from model import load_active_model
 
-app = FastAPI(title="Turkish Review Classifier")
-
-# The model is loaded once at startup, not per request (NFR-01)
-model = load_active_model()
+# Holds the loaded model so that it is not rebuilt for every request (NFR-01).
+_model = None
 
 
-@app.on_event("startup")
-def startup():
+def get_model():
+    """Return the active model, loading it only the first time it is needed.
+
+    Endpoints receive the model through this function instead of reading a
+    module-level variable. That keeps the loading decision in one place and
+    allows the tests to supply a lightweight stand-in, so running the test
+    suite does not load the 423 MB fine-tuned model.
+    """
+    global _model
+    if _model is None:
+        _model = load_active_model()
+    return _model
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Prepare the database and load the model before the first request."""
     database.init_database()
+    get_model()
+    yield
+
+
+app = FastAPI(title="Turkish Review Classifier", lifespan=lifespan)
 
 
 class ReviewRequest(BaseModel):
@@ -29,7 +49,7 @@ class PredictionResponse(BaseModel):
 
 
 @app.post("/predict", response_model=PredictionResponse)
-def predict(request: ReviewRequest):
+def predict(request: ReviewRequest, model=Depends(get_model)):
     text = request.text.strip()
 
     if not text:
