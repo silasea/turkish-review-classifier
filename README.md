@@ -26,7 +26,7 @@ The target users are e-commerce businesses, online retailers, customer experienc
 | PyTorch                   | In use  | Fine-tuning and inference for the transformer model   |
 | FastAPI + uvicorn         | In use  | REST API and interactive documentation                |
 | SQLite                    | In use  | Local storage of analysis results                     |
-| pytest                    | Planned | Automated tests (Week 6)                              |
+| pytest                    | In use  | Automated test suite (21 tests)                       |
 | Docker                    | Planned | Containerization (Week 7)                             |
 
 ## Scope Limitations
@@ -49,23 +49,25 @@ Implemented:
 - Input validation for empty, whitespace-only, and over-length reviews
 - Storage of analysis results in SQLite, with a `/history` endpoint for retrieval
 - Two interchangeable models behind a common `predict(text)` interface, selected through configuration
+- Automated test suite: 21 pytest tests covering the endpoints, validation, boundary values and storage
 
 Planned:
 
-- Automated tests with pytest
 - Docker-based packaging
 - A simple web user interface
 
 ## Model Performance
 
-Both models were evaluated on the same held-out test set, which was not used during training or model selection.
+Both models were evaluated on the same held-out test set (15,000 reviews), which was not used during training or model selection.
 
-| Model                           | Negative F1 | Neutral F1 | Positive F1 | Macro-F1  |
-| ------------------------------- | ----------- | ---------- | ----------- | --------- |
-| TF-IDF + Logistic Regression    | 0.781       | 0.562      | 0.864       | 0.736     |
-| Fine-tuned BERTurk (**active**) | 0.838       | 0.630      | 0.898       | **0.778** |
+| Model                           | Accuracy | Negative F1 | Neutral F1 | Positive F1 | Macro-F1  |
+| ------------------------------- | -------- | ----------- | ---------- | ----------- | --------- |
+| TF-IDF + Logistic Regression    | 0.782    | 0.766       | 0.559      | 0.867       | 0.731     |
+| Fine-tuned BERTurk (**active**) | 0.823    | 0.820       | 0.615      | 0.898       | **0.778** |
 
-Macro-F1 is used as the metric of record because the dataset is imbalanced: a plain accuracy score would be dominated by the majority Positive class. The fine-tuned model meets the project target of 0.75 macro-F1; the baseline does not. Neutral remains the weakest class for both models.
+Macro-F1 is used as the metric of record because the dataset is imbalanced: a plain accuracy score would be dominated by the majority Positive class. The fine-tuned model meets the project target of 0.75 macro-F1; the baseline does not.
+
+Neutral remains the weakest class for both models. Its precision is 0.529 for the fine-tuned model, so about half of the reviews predicted as Neutral belong to another class. The confusion matrix shows why: 1147 reviews that are actually Positive are predicted as Neutral, against only 414 in the opposite direction. Borderline Positive reviews are absorbed into the Neutral class rather than Neutral reviews being missed.
 
 ## Project Structure
 
@@ -74,6 +76,7 @@ docs/          Report draft and architecture design
 evidence/      Screenshots documenting each development stage
 notebooks/     baseline.ipynb, berturk_finetuning.ipynb
 src/           api.py, model.py, database.py, config.py, explore_data.py
+tests/         pytest suite: conftest.py, test_api.py, test_database.py
 models/        Trained models (not tracked in Git)
 data/          Dataset and SQLite database (not tracked in Git)
 ```
@@ -163,8 +166,16 @@ Empty, whitespace-only, or over-length input returns HTTP 422 and the model is n
 
 `limit` accepts values between 1 and 100 and defaults to 10.
 
+## Running the Tests
+
+```bash
+pytest -v
+```
+
+The suite covers the database layer, both endpoints, input validation and boundary conditions. It does not load the fine-tuned model: the API tests supply a lightweight stand-in through dependency injection, so the 21 tests complete in under a second. Model quality is measured separately, as reported above.
+
 ## Current Status
 
-Week 5 — Fine-tuned BERTurk integrated and active; analysis results stored in SQLite and retrievable through `/history`.
+Week 6 — Fine-tuned BERTurk active, results stored in SQLite and retrievable through `/history`, and 21 automated tests passing.
 
-**Known limitations:** Neutral is the weakest class (test precision 0.529). There is no user interface; the API is used through its interactive documentation. No automated tests exist yet. Inference runs on CPU, which is adequate for single predictions but not for high request volumes.
+**Known limitations:** Neutral is the weakest class (test precision 0.529). There is no user interface; the API is used through its interactive documentation. The model's own prediction logic is covered by separate evaluation on the test set rather than by the automated suite. Response time (NFR-01) has not been measured systematically. Inference runs on CPU, which is adequate for single predictions but not for high request volumes. The application has not yet been containerised.
