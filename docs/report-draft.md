@@ -421,9 +421,9 @@ These preliminary checks do not replace the full testing and validation work sch
 | Screenshot / evidence        | evidence/week-04/01-dataset-exploration.png, 02-baseline-results.png, 03-api-success.png, 04-api-validation-error.png                                                                      |
 | Next development step        | Fine-tune BERTurk and integrate it behind the same prediction interface (Week 5).                                                                                                          |
 
-## 26. Current Limitations and Next Steps
+## 26. Current Limitations and Next Steps (End of Week 4)
 
-The current prototype has the following limitations:
+At the end of Week 4, the prototype had the following limitations. Sections 27–36 document how these were addressed during Week 5:
 
 - The fine-tuned BERTurk model has not yet been trained; only the TF-IDF and Logistic Regression baseline is available.
 - The baseline reached a macro-F1 of 0.736 on the validation set, below the 0.75 target defined in NFR-02.
@@ -433,3 +433,173 @@ The current prototype has the following limitations:
 - The model was trained on product reviews and its behaviour on out-of-domain text is not defined.
 
 **Planned work for Week 5:** Fine-tune BERTurk for three-class Turkish sentiment classification and integrate it into the existing FastAPI service by replacing the baseline model behind the same `predict(text)` interface, then verify that the API continues to work with the new model.
+
+## 27. Week 5 Implementation Overview
+
+Week 5 extended the Week 4 prototype through two development stages. Stage 2 completed the result storage requirement and improved the internal organisation of the source code. Stage 3 replaced the baseline classifier with a fine-tuned BERTurk model, which was the main engineering milestone of the project.
+
+Together these stages changed the status of three requirements. FR-06 (storing analysis results) moved from "not implemented" to implemented and verifiable. NFR-02 (macro-F1 of at least 0.75 on a held-out test set), which the baseline had not met, is now satisfied. NFR-03 (input validation) was extended with a second invalid-input condition.
+
+## 28. Development Stage 2 — Result Storage and Code Organisation
+
+**Requirement IDs:** FR-06, NFR-03
+
+Stage 2 implemented persistent storage of analysis results. A new module, `src/database.py`, creates the `analysis_results` table described in Section 19 and provides two operations: `save_result()` to store a prediction and `get_recent_results()` to read stored records back. The API calls the first after every successful prediction and exposes the second through a new `GET /history` endpoint.
+
+The storage function returns a boolean rather than raising an exception when the database is unavailable. This was a deliberate decision: storing a result is secondary to answering the user, so a storage failure should not prevent a prediction from being returned. The response includes a `stored` field so that the caller can see whether the record was written. This is consistent with the priority assigned to FR-06 in Section 9, where it is marked "Should" rather than "Must".
+
+All SQL statements use parameter placeholders instead of string formatting, so review text containing quotation marks or SQL keywords cannot alter the query.
+
+Stage 2 also introduced `src/config.py`, which collects file paths, sentiment class names and input limits that were previously spread across modules. Two further quality improvements were made: `BaselineModel` now raises a descriptive `ModelLoadError` when the model file is missing instead of failing with an unclear library error, and the API rejects review text longer than the configured maximum, giving a second invalid-input condition alongside empty input.
+
+![Prediction with storage](../evidence/week-05/01-predict-with-storage.png)
+
+**Figure 5.1:** A prediction request returning the sentiment class, the active model name and confirmation that the result was stored.
+
+![History endpoint](../evidence/week-05/02-history-endpoint.png)
+
+**Figure 5.2:** The `/history` endpoint returning three stored analysis records with their identifiers, predicted classes and timestamps. This output demonstrates that the database write and read operations both function, rather than only showing that the endpoint returns a response.
+
+## 29. Development Stage 3 — Fine-Tuned BERTurk Integration
+
+**Requirement IDs:** FR-02, NFR-02
+
+Stage 3 fine-tuned the BERTurk model selected in ADR-02 and integrated it into the running service.
+
+Training was performed in a Kaggle notebook using a Tesla T4 GPU. The same dataset splits used for the baseline were loaded, and the same star-rating-to-sentiment mapping was applied, so that the two models remain comparable. Review texts were tokenised with the BERTurk tokenizer at a maximum length of 128 tokens, which covers the large majority of customer reviews in this dataset.
+
+The training loop was implemented directly in PyTorch rather than through a high-level training wrapper. Each step moves a batch to the GPU, computes predictions, measures the error with a weighted cross-entropy loss, propagates the gradients backward, updates the model parameters and advances the learning-rate schedule. Mixed-precision arithmetic was used to shorten training time.
+
+Class weights were applied to the loss function using the same balancing formula as the baseline model, assigning a weight of 1.913 to Neutral, 1.437 to Negative and 0.561 to Positive. This addresses RISK-03, the class imbalance identified in Week 3: an error on a Neutral example is penalised roughly three times more heavily than an error on a Positive one.
+
+The model was trained for two epochs with a learning rate of 2e-5 and a batch size of 32. Average training loss decreased from 0.5671 in the first epoch to 0.4485 in the second.
+
+![Training progress](../evidence/week-05/04-berturk-training.png)
+
+**Figure 5.3:** Fine-tuning progress over two epochs, showing the decrease in average training loss.
+
+Integration required no change to the API layer. A second class, `BERTurkModel`, was added to `src/model.py` implementing the same `predict(text) -> str` interface as `BaselineModel`, and a `load_active_model()` function returns whichever model is named in `config.ACTIVE_MODEL`. Switching the service from the baseline to the fine-tuned model is therefore a one-line configuration change.
+
+![API using BERTurk](../evidence/week-05/07-api-with-berturk.png)
+
+**Figure 5.4:** The same `/predict` endpoint after switching the active model, now reporting `berturk-finetuned` as the model name. The endpoint code, validation logic and storage behaviour are unchanged.
+
+## 30. Model Comparison: Baseline and Fine-Tuned BERTurk
+
+Both models were evaluated on the same validation set used in Week 4.
+
+| Class        | Baseline F1 | BERTurk F1 | Difference |
+| ------------ | ----------- | ---------- | ---------- |
+| Negative     | 0.781       | 0.838      | +0.057     |
+| Neutral      | 0.562       | 0.630      | +0.068     |
+| Positive     | 0.864       | 0.898      | +0.034     |
+| **Macro-F1** | **0.736**   | **0.788**  | **+0.052** |
+
+![Validation results](../evidence/week-05/05-berturk-evaluation.png)
+
+**Figure 5.5:** Classification report of the fine-tuned BERTurk model on the validation set.
+
+The fine-tuned model was then evaluated on the test set, which was not used during training or model selection.
+
+![Test results](../evidence/week-05/06-berturk-test-evaluation.png)
+
+**Figure 5.6:** Classification report on the held-out test set, reaching a macro-F1 of 0.778.
+
+Three observations follow from these results.
+
+NFR-02 is satisfied. The requirement specifies a macro-F1 of at least 0.75 on a held-out test set; the fine-tuned model reached 0.778. The baseline had fallen short at 0.736.
+
+The largest improvement is in the Neutral class, which gained 0.068 F1 points. This is the class identified as problematic in RISK-01, and the improvement is consistent with the expectation that a contextual language model handles mixed expressions better than a bag-of-words representation.
+
+Neutral nevertheless remains the weakest class, with a test precision of 0.529. Roughly half of the reviews predicted as Neutral belong to another class. RISK-01 has been reduced but not resolved, and this remains a limitation of the current system.
+
+The difference between validation macro-F1 (0.788) and test macro-F1 (0.778) is small, which suggests the model generalises rather than having memorised the training data.
+
+## 31. Updated System Architecture
+
+The implemented system follows the architecture presented in Figure 3.1, with two additions. The table below compares the planned design with the current state.
+
+| Component            | Original design (Week 3)                                           | Current state                                                                                                                                                         |
+| -------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| User Interface       | Planned as a simple web page for entering reviews                  | Not implemented; the FastAPI interactive documentation is used for demonstration. Deferred to a later week.                                                           |
+| FastAPI REST API     | Planned with a single `/predict` endpoint                          | Implemented as designed, plus a `/history` endpoint that was not in the original design. Added so that stored results can be retrieved, which makes FR-06 verifiable. |
+| Model Layer          | Planned as a common `predict(text)` interface shared by two models | Implemented as designed. Both `BaselineModel` and `BERTurkModel` expose the same method, and `load_active_model()` selects between them.                              |
+| SQLite Database      | Planned to store review text, predicted class and timestamp        | Implemented as designed, using the table structure described in Section 19.                                                                                           |
+| Configuration module | Not present in the original design                                 | Added as `src/config.py`. File paths, class names, input limits and the active model selection are no longer spread across modules.                                   |
+
+The central design decision of Week 3 — placing the model behind a common interface — was validated in practice during Stage 3. Replacing the baseline with the fine-tuned model required no modification to the API layer, the validation logic or the storage code.
+
+## 32. Updated Technology Stack
+
+The following components were added to the stack described in Section 22.
+
+| Component            | Technology / version                           | Role and reason for selection                                                                                                                                     |
+| -------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Deep learning        | PyTorch 2.15.0 (CPU build)                     | Runs the fine-tuned transformer model during inference. The CPU build is used locally because predictions are made one review at a time and do not require a GPU. |
+| Transformer models   | Transformers 5.24.0 (local), 5.20.2 (training) | Loads the BERTurk tokenizer and the fine-tuned classification model.                                                                                              |
+| Training environment | Kaggle Notebooks, Tesla T4 GPU                 | Provides free GPU access for fine-tuning. Used instead of a local machine, which has no suitable GPU.                                                             |
+| Storage              | SQLite (Python standard library)               | Stores analysis results locally, as decided in ADR-01. Requires no separate server process.                                                                       |
+
+## 33. Technical Challenges (Week 5)
+
+### 33.1 Google Colab Storage Quota
+
+**Problem:** When attempting to create a Colab notebook for fine-tuning, Google Colab returned an error stating that the Drive storage quota had been exceeded (`GapiError: The user has exceeded their Drive storage quota`). Because Colab stores notebooks in Google Drive, no new notebook could be created.
+
+**Solution:** Rather than freeing space in Drive, I moved the training work to Kaggle Notebooks, which provides free GPU access and does not depend on Drive storage. This also confirmed the mitigation planned for RISK-02: keeping an alternative GPU environment available.
+
+### 33.2 Model Download from a Draft Session
+
+**Problem:** After training, the exported model archive appeared in the Kaggle Output panel but could not be downloaded directly. The cause was that the notebook was still running as a draft session, where output downloads are not permitted.
+
+**Solution:** I created a saved version of the notebook. In the Save Version dialog, the "Save Output" option under Advanced Settings was set to never save output for a Quick Save, so I changed it. Once the version completed successfully, the model archive could be downloaded from the version page.
+
+### 33.3 Transformers Major Version Difference
+
+**Problem:** The Kaggle environment provided Transformers 5.20.2. Because this is a major version change, the parameters of the high-level `Trainer` API could differ from the 4.x documentation, creating a risk of incompatibility during training.
+
+**Solution:** Instead of using the `Trainer` class, I implemented the fine-tuning loop manually in PyTorch. This avoids dependence on API changes and gives direct control over loss computation, backpropagation, the optimizer step and the learning-rate scheduler, which also makes the training process easier to explain.
+
+## 34. Development Process — Stage 2
+
+| Field                     | Entry                                                                                                                                                                                              |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Date                      | 23.11.2026                                                                                                                                                                                         |
+| Objective                 | Implement persistent storage of analysis results and improve code organisation.                                                                                                                    |
+| Requirement IDs           | FR-06, NFR-03                                                                                                                                                                                      |
+| Implemented functionality | SQLite storage of review text, predicted class and timestamp; `GET /history` endpoint for retrieval; centralised configuration; descriptive model-loading errors; maximum input length validation. |
+| Main files / modules      | `src/database.py` (new), `src/config.py` (new), `src/api.py`, `src/model.py`                                                                                                                       |
+| Engineering decision      | Storage failures return a status flag instead of raising an exception, so that a database problem cannot prevent a prediction from being returned to the user.                                     |
+| Technical problem         | FR-06 required results to be stored "for later retrieval", but there was no way to confirm that records had actually been written.                                                                 |
+| Solution                  | Added the `/history` endpoint, which reads stored records back and makes the storage operation verifiable rather than assumed.                                                                     |
+| Screenshot / evidence     | evidence/week-05/01-predict-with-storage.png, 02-history-endpoint.png                                                                                                                              |
+| GitHub commit             | [COMMIT HASH] — feat: add SQLite storage and history endpoint (FR-06)                                                                                                                              |
+| Next step                 | Fine-tune BERTurk and integrate it behind the existing model interface.                                                                                                                            |
+
+## 35. Development Process — Stage 3
+
+| Field                     | Entry                                                                                                                                                                                                 |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Date                      | 23.11.2026                                                                                                                                                                                            |
+| Objective                 | Fine-tune BERTurk for three-class Turkish sentiment classification and integrate it into the running service.                                                                                         |
+| Requirement IDs           | FR-02, NFR-02                                                                                                                                                                                         |
+| Implemented functionality | Fine-tuned BERTurk model trained on the project dataset; `BERTurkModel` class implementing the shared prediction interface; configuration-driven model selection.                                     |
+| Main files / modules      | `notebooks/berturk_finetuning.ipynb` (new), `src/model.py`, `src/config.py`                                                                                                                           |
+| Engineering decision      | The fine-tuned model was added as a second implementation of the existing `predict(text)` interface rather than by modifying the API, so the active model can be changed through configuration alone. |
+| Technical problem         | The local machine has no suitable GPU, and the first GPU environment attempted (Google Colab) could not be used because of a storage quota limit.                                                     |
+| Solution                  | Training was moved to Kaggle Notebooks with a Tesla T4 GPU; the exported model was downloaded and placed in the local `models/` directory.                                                            |
+| Screenshot / evidence     | evidence/week-05/03-gpu-availability.png, 04-berturk-training.png, 05-berturk-evaluation.png, 06-berturk-test-evaluation.png, 07-api-with-berturk.png                                                 |
+| GitHub commit             | [COMMIT HASH] — feat: integrate fine-tuned BERTurk behind the shared model interface                                                                                                                  |
+| Next step                 | Write automated tests with pytest and produce a systematic comparison of both models (Week 6).                                                                                                        |
+
+## 36. Current Limitations and Next Steps (Week 5)
+
+The following limitations remain after Week 5:
+
+- Neutral remains the weakest class, with a test precision of 0.529. RISK-01 is reduced but not resolved.
+- No user interface exists; the service is demonstrated through the interactive API documentation.
+- No automated tests have been written; all verification so far has been manual.
+- The trained model file is not stored in the repository because of its size (423 MB). It is regenerated by running `notebooks/berturk_finetuning.ipynb`.
+- Inference runs on CPU locally, which is adequate for single predictions but would not support high request volumes.
+
+**Planned work for Week 6:** Implement automated tests with pytest covering the API endpoints, input validation and the model interface, and produce a systematic evaluation comparing both models on the same held-out test set.
